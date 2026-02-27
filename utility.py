@@ -100,20 +100,35 @@ class checkpoint():
         self.log_file.close()
 
     def plot_psnr(self, epoch):
-        axis = np.linspace(1, epoch, epoch)
+        """
+        Safely plot PSNR curve based on actual logged values.
+        """
+
+        if self.log.numel() == 0:
+            print("No PSNR data to plot.")
+            return
+
+        # Use actual number of logged epochs
+        num_epochs = self.log.size(0)
+        axis = np.arange(1, num_epochs + 1)
+
         label = 'SR on {}'.format(self.args.data_test)
         fig = plt.figure()
         plt.title(label)
+
         for idx_scale, scale in enumerate(self.args.scale):
-            plt.plot(
-                axis,
-                self.log[:, idx_scale].numpy(),
-                label='Scale {}'.format(scale)
-            )
+            if idx_scale < self.log.size(1):
+                plt.plot(
+                    axis,
+                    self.log[:, idx_scale].cpu().numpy(),
+                    label='Scale {}'.format(scale)
+                )
+
         plt.legend()
         plt.xlabel('Epochs')
         plt.ylabel('PSNR')
         plt.grid(True)
+
         plt.savefig('{}/test_{}.pdf'.format(self.dir, self.args.data_test))
         plt.close(fig)
 

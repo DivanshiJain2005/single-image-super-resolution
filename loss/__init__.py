@@ -133,22 +133,28 @@ class Loss(nn.modules.loss._Loss):
         return ''.join(log)
 
     def plot_loss(self, apath, epoch):
-        """ 绘制各个函数loss-epoch曲线，存储为pdf
-        :param apath: 文件存储位置
-        :param epoch: epoch
-        """
-        axis = np.linspace(1, epoch, epoch)
-        for i, l in enumerate(self.loss):  # 遍历loss函数列表
-            label = '{} Loss'.format(l['type'])
-            fig = plt.figure()
-            plt.title(label)
-            plt.plot(axis, self.log[:, i].numpy(), label=label)
-            plt.legend()
-            plt.xlabel('Epochs')
-            plt.ylabel('Loss')
-            plt.grid(True)
-            plt.savefig('{}/loss_{}.pdf'.format(apath, l['type']))
-            plt.close(fig)
+      """
+      Safely plot loss curves based on actual log size.
+      """
+
+      if self.log.numel() == 0:
+          print("No loss data to plot.")
+          return
+
+      num_epochs = self.log.size(0)
+      axis = np.arange(1, num_epochs + 1)
+
+      for i, l in enumerate(self.loss):
+          label = '{} Loss'.format(l['type'])
+
+          plt.figure()
+          plt.title(label)
+          plt.plot(axis, self.log[:, i].cpu().numpy())
+          plt.xlabel('Epochs')
+          plt.ylabel('Loss')
+          plt.grid(True)
+          plt.savefig('{}/loss_{}.pdf'.format(apath, l['type']))
+          plt.close()
 
     def get_loss_module(self):
         """返回loss函数
