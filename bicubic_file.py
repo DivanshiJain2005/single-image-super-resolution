@@ -2,10 +2,10 @@ import os
 from PIL import Image
 
 # Original HR folder (relative path from /workspace/EPGDUN)
-hr_dir = "./data/DIV2K/DIV2K_train_HR"
+hr_dir = "./data/DIV2K/DIV2K_valid_HR"
 
 # Base LR folder
-lr_base_dir = "data/DIV2K/DIV2K_train_LR_bicubic"
+lr_base_dir = "data/DIV2K/DIV2K_valid_LR_bicubic"
 
 # Scales you want to generate
 scales = [2, 3, 4]

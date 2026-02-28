@@ -40,6 +40,9 @@ class Model(nn.Module):
         if args.print_model:
             print(self.model)
 
+    # ==========================================================
+    # Forward
+    # ==========================================================
     def forward(self, x, idx_scale):
         self.idx_scale = idx_scale
         target = self.get_model()
@@ -47,19 +50,26 @@ class Model(nn.Module):
         if hasattr(target, 'set_scale'):
             target.set_scale(idx_scale)
 
+        # ---------------- Self Ensemble ----------------
         if self.self_ensemble and not self.training:
             if self.chop:
-                forward_function = self.forward_chop
+                forward_function = lambda _x: self.forward_chop(_x)
             else:
-                forward_function = self.model.forward
+                forward_function = lambda _x: self.model(_x, idx_scale)
+
             return self.forward_x8(x, forward_function)
 
+        # ---------------- Chop Only ----------------
         elif self.chop and not self.training:
             return self.forward_chop(x)
 
+        # ---------------- Normal Forward ----------------
         else:
-            return self.model(x)
+            return self.model(x, idx_scale)
 
+    # ==========================================================
+    # Utility
+    # ==========================================================
     def get_model(self):
         if self.n_GPUs == 1:
             return self.model
@@ -70,6 +80,9 @@ class Model(nn.Module):
         target = self.get_model()
         return target.state_dict(**kwargs)
 
+    # ==========================================================
+    # Save
+    # ==========================================================
     def save(self, apath, epoch, is_best=False):
         target = self.get_model()
 
@@ -93,7 +106,9 @@ class Model(nn.Module):
                 os.path.join(model_dir, f'model_{epoch}.pt')
             )
 
-    # ✅ FIXED LOAD FUNCTION
+    # ==========================================================
+    # Load
+    # ==========================================================
     def load(self, apath, pre_train='.', resume=-1, cpu=False):
 
         if cpu:
@@ -138,8 +153,9 @@ class Model(nn.Module):
             else:
                 print('Specified checkpoint not found. Training from scratch.')
 
-    # ---- keep the rest exactly as your original ----
-
+    # ==========================================================
+    # Forward Chop
+    # ==========================================================
     def forward_chop(self, x, shave=10, min_size=160000):
         scale = self.scale[self.idx_scale]
         n_GPUs = min(self.n_GPUs, 4)
@@ -159,7 +175,11 @@ class Model(nn.Module):
             sr_list = []
             for i in range(0, 4, n_GPUs):
                 lr_batch = torch.cat(lr_list[i:(i + n_GPUs)], dim=0)
-                sr_batch = self.model(lr_batch)
+                sr_batch = self.model(lr_batch, self.idx_scale)
+
+                if isinstance(sr_batch, tuple):
+                    sr_batch = sr_batch[0]
+
                 sr_list.extend(sr_batch.chunk(n_GPUs, dim=0))
         else:
             sr_list = [
