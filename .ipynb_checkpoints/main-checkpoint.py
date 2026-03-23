@@ -21,6 +21,7 @@ gc.collect()
 torch.cuda.empty_cache()
 # 用于判断之前训练好的模型是否可用
 if checkpoint.ok:
+    print("args.scale before Data loader:", args.scale)
     loader = mydata.Data(args)  # 调用mydata模块下的
     # 创建数据加载器（既有训练加载器，也有测试加载器，加载模型所需要的数据
     # print(loader)
