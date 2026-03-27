@@ -58,26 +58,22 @@ def np2Tensor(images, rgb_range=255):
     return [_np2Tensor(img, rgb_range) for img in images]
 
 
-def _augment(img):
-    img = np.array(img)
-
-    # horizontal flip
-    if random.random() < 0.5:
-        img = img[:, ::-1, :]
-
-    # vertical flip
-    if random.random() < 0.5:
-        img = img[::-1, :, :]
-
-    # rotation
-    if random.random() < 0.5:
-        img = img.transpose(1, 0, 2)
-
-    return img
-
-
 def augment(images):
-    """Apply random augmentation to list of images"""
+    """Apply the same random augmentation to all images (LR and HR must match)."""
+    hflip = random.random() < 0.5
+    vflip = random.random() < 0.5
+    rot   = random.random() < 0.5
+
+    def _augment(img):
+        img = np.array(img)
+        if hflip:
+            img = img[:, ::-1, :]
+        if vflip:
+            img = img[::-1, :, :]
+        if rot:
+            img = img.transpose(1, 0, 2)
+        return img
+
     return [_augment(img) for img in images]
 
 

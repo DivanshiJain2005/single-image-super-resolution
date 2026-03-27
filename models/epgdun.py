@@ -116,8 +116,8 @@ class EDDUN(nn.Module):
         f_init = []
         x_init = []
         v_init = []
-        if not self.training:  # 测试模式
-            y = F.interpolate(y, size=(256, 256), mode='bilinear', align_corners=False)
+        # NOTE: Do not force a fixed size during evaluation.
+        # It breaks LR/HR alignment and tanks PSNR.
 
         x_texture.append(torch.nn.functional.interpolate(
             # 原始的低分辨率图像y插值得到初始的高分辨率图像x

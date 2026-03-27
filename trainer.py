@@ -58,16 +58,29 @@ class Trainer:
                         lr, hr = self.prepare([lr, hr])  # 对LR和HR同时进行数据预处理
                     else:  # 否则就只处理LR图像
                         lr = self.prepare([lr])[0]
+                    # Pad LR to avoid size mismatches in multi-stride blocks (x4 needs multiple of 16)
+                    pad_h = (16 - (lr.shape[-2] % 16)) % 16
+                    pad_w = (16 - (lr.shape[-1] % 16)) % 16
+                    if pad_h or pad_w:
+                        lr = F.pad(lr, (0, pad_w, 0, pad_h), mode='reflect')
+
                     sr = self.model(lr, idx_scale)  # 测试模型
                     if isinstance(sr, list):
                         sr = sr[-1]  # 保存重构的SR图像的最后一个版本
+                    # Crop SR back to HR size after padding
+                    sr = sr[:, :, :hr.shape[-2], :hr.shape[-1]]
                     # print("hr的shape:", hr.shape)
                     # print("sr的shape:", sr.shape)
                     sr = utility.quantize(sr, self.args.rgb_range)  # 将图像张量转化为RGB范围的数值
                     # hr_size = hr.shape[2:]  # 可以hr或者sr两个采样都试一下，看那个PSNR好
                     # sr = F.interpolate(sr, size=hr_size, mode='bilinear', align_corners=False)
+                    # Align sizes only if they differ; prefer keeping HR intact.
                     sr_size = sr.shape[2:]
-                    hr = F.interpolate(hr, size=sr_size, mode='bilinear', align_corners=False)
+                    hr_size = hr.shape[2:]
+                    if sr_size != hr_size:
+                        sr = F.interpolate(
+                            sr, size=hr_size, mode='bilinear', align_corners=False
+                        )
                     save_list = [sr]  # 保存处理之后的SR图像
                     if not no_eval:  # 计算PSNR
                         eval_acc += utility.calc_psnr(
@@ -134,7 +147,6 @@ class Trainer:
                 loss = self.loss(sr, hr)
 
             if loss.item() < self.args.skip_threshold * self.error_last:  # 算出的损失比上一次还要小，可以进行更新
-                loss.requires_grad_(True)  # 设置当前损失函数的需要计算梯度的属性为真
                 loss.backward()  # 自动计算require_grad属性为真的张量的梯度
                 self.optimizer.step()  # 更新参数
             else:  # 否则直接跳过这一个批次的数据

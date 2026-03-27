@@ -2,10 +2,7 @@ import datetime
 import math
 import os
 import time
-import matplotlib
-
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+plt = None
 
 import numpy as np
 import imageio
@@ -105,6 +102,16 @@ class checkpoint():
         self.log_file.close()
 
     def plot_psnr(self, epoch):
+        global plt
+        if plt is None:
+            try:
+                import matplotlib
+                matplotlib.use('Agg')
+                import matplotlib.pyplot as _plt
+                plt = _plt
+            except Exception as e:
+                print(f"Matplotlib unavailable, skipping PSNR plot: {e}")
+                return
         if self.log.numel() == 0:
             print("No PSNR data to plot.")
             return

@@ -1,6 +1,5 @@
 import gc
 import torch
-import loss
 import models
 import mydata
 import utility
@@ -26,7 +25,12 @@ if checkpoint.ok:
     # print(loader)
     model = models.Model(args, checkpoint)  # 用checkpoint中存储的模型参数初始化模型，否则就使用默认的参数初始化模型
     # 如果是测试模型则不进行损失函数的计算
-    loss = loss.Loss(args, checkpoint) if not args.test_only else None
+    # Avoid importing matplotlib-heavy loss stack when running test-only.
+    if not args.test_only:
+        import loss as loss_module
+        loss = loss_module.Loss(args, checkpoint)
+    else:
+        loss = None
     # 将数据加载器、模型、损失函数传入训练其中
     t = Trainer(args, loader, model, loss, checkpoint)  # 实例化初始化参数之后可以调用对应的对象的方法
     while not t.terminate():
