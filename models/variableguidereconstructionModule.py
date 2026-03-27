@@ -49,25 +49,22 @@ class IGRM(nn.Module):
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
         )
+        # LSTM registered as a module so its weights are trained
+        self.lstm = nn.LSTM(input_size=32, hidden_size=32, num_layers=1, batch_first=True)
 
     def forward(self, r, h):
         p = self.pfm(r, h)
         bb_1 = self.baseBlock(p)  # [B, 32, H, W]
 
         B, C, H, W = bb_1.shape
-        target_size = (H, W)
 
         # LSTM along width dimension
         lstm_input = bb_1.permute(0, 2, 3, 1).contiguous()  # [B, H, W, C]
         lstm_input = lstm_input.view(B * H, W, C)  # treat each row as sequence
-        lstm = nn.LSTM(input_size=C, hidden_size=C, num_layers=2, batch_first=True).to(bb_1.device)
-        output, _ = lstm(lstm_input)  # [B*H, W, C]
+        output, _ = self.lstm(lstm_input)  # [B*H, W, C]
 
         # reshape back to [B, C, H, W]
         output = output.view(B, H, W, C).permute(0, 3, 1, 2)  # [B, C, H, W]
-
-        # optional non-local block
-        # output = self.nonlocalblock(output)
 
         bb_2 = self.baseBlock(output)
         con = self.conv(bb_2)
