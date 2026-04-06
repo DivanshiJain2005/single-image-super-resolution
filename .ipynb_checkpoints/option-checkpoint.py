@@ -11,7 +11,7 @@ parser.add_argument('--resume', type=int, default=0, help='resume from specific 
 parser.add_argument('--print_model', action='store_true', help='print model')
 parser.add_argument('--save_models', action='store_true', help='save all intermediate models')
 parser.add_argument('--print_every', type=int, default=50, help='batches to wait before logging')
-parser.add_argument('--save_results', type=bool, default=True, help='save output results')
+parser.add_argument('--save_results', action='store_true', help='save output results')
 
 # ------------------ Hardware ------------------
 parser.add_argument('--n_threads', type=int, default=4, help='number of threads for data loading')
