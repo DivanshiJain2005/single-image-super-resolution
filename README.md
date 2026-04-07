@@ -126,3 +126,17 @@ python main.py \
   --self_ensemble \
   --ext img \
   --n_threads 0
+
+To reliably hit 32+ (x4) and 38+ (x2), you need one of:
+
+Option 1 — Increase model capacity (recommended)
+
+In epgdun.py, increase T and feature width:
+
+
+self.T = 8  # more iterations
+And in option.py, change default features:
+
+
+parser.add_argument('--n_feats', type=int, default=128, ...)  # was 64
+Option 2 — Switch to a proven backbone like EDSR-baseline which is already implemented in many SR repos and reliably hits these targets.
