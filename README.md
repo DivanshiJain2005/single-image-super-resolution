@@ -140,3 +140,7 @@ And in option.py, change default features:
 
 parser.add_argument('--n_feats', type=int, default=128, ...)  # was 64
 Option 2 — Switch to a proven backbone like EDSR-baseline which is already implemented in many SR repos and reliably hits these targets.
+
+Option 2 — Switch to a proven backbone like EDSR-baseline which is already implemented in many SR repos and reliably hits these targets.
+
+Option 3 — Train longer on Colab with GPU — your MX450 laptop GPU will be very slow for 600 epochs; Colab's T4/V100 would be 10–20× faster.
