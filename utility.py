@@ -119,7 +119,9 @@ class checkpoint():
         num_epochs = self.log.size(0)
         axis = np.arange(1, num_epochs + 1)
 
-        label = 'SR on {}'.format(self.args.data_test)
+        label = 'SR on {}'.format(
+            '/'.join(self.args.data_test) if isinstance(self.args.data_test, list) else self.args.data_test
+        )
         fig = plt.figure()
         plt.title(label)
 
@@ -139,12 +141,15 @@ class checkpoint():
         plt.savefig('{}/test_{}.pdf'.format(self.dir, self.args.data_test))
         plt.close(fig)
 
-    def save_results(self, filename, save_list, scale):
+    def save_results(self, filename, save_list, scale, dataset_name=None):
         postfix = ('SR', 'LR', 'HR')
+        name = dataset_name or (
+            self.args.data_test[0] if isinstance(self.args.data_test, list) else self.args.data_test
+        )
 
         for v, p in zip(save_list, postfix):
             folder = '{}/results/{}/{}/X{}/'.format(
-                self.dir, p, self.args.testset, scale
+                self.dir, p, name, scale
             )
             os.makedirs(folder, exist_ok=True)
 
@@ -160,6 +165,43 @@ class checkpoint():
 def quantize(img, rgb_range):
     # Keep it stable but consistent with [0,1]
     return torch.clamp(img, 0, 1)
+
+
+# ================= SSIM =================
+def calc_ssim(sr, hr, scale):
+    """Compute SSIM on the Y channel (luminance), cropping shave pixels from borders."""
+    sr = sr.float()
+    hr = hr.float()
+
+    # Convert RGB → Y (luminance) using standard coefficients scaled to [0,255]
+    def rgb_to_y(t):
+        coef = t.new_tensor([65.738, 129.057, 25.064]).view(1, 3, 1, 1) / 256.0
+        return t.mul(coef).sum(dim=1, keepdim=True).mul(255.0)
+
+    sr_y = rgb_to_y(sr)
+    hr_y = rgb_to_y(hr)
+
+    shave = scale
+    sr_y = sr_y[:, :, shave:-shave, shave:-shave]
+    hr_y = hr_y[:, :, shave:-shave, shave:-shave]
+
+    C1 = (0.01 * 255) ** 2
+    C2 = (0.03 * 255) ** 2
+
+    mu1 = torch.nn.functional.avg_pool2d(sr_y, kernel_size=11, stride=1, padding=0)
+    mu2 = torch.nn.functional.avg_pool2d(hr_y, kernel_size=11, stride=1, padding=0)
+
+    mu1_sq = mu1 ** 2
+    mu2_sq = mu2 ** 2
+    mu1_mu2 = mu1 * mu2
+
+    sigma1_sq = torch.nn.functional.avg_pool2d(sr_y ** 2, 11, 1, 0) - mu1_sq
+    sigma2_sq = torch.nn.functional.avg_pool2d(hr_y ** 2, 11, 1, 0) - mu2_sq
+    sigma12   = torch.nn.functional.avg_pool2d(sr_y * hr_y, 11, 1, 0) - mu1_mu2
+
+    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / \
+               ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+    return ssim_map.mean().item()
 
 
 # ================= PSNR =================

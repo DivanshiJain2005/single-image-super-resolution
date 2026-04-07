@@ -22,7 +22,7 @@ parser.add_argument('--seed', type=int, default=1, help='random seed')
 # ------------------ Data ------------------
 parser.add_argument('--dir_data', type=str, default='../dataset', help='dataset directory')
 parser.add_argument('--data_train', type=str, default='DIV2K', help='train dataset name')
-parser.add_argument('--data_test', type=str, default='DIV2K', help='test dataset name')
+parser.add_argument('--data_test', type=str, nargs='+', default=['DIV2K'], help='test dataset name(s)')
 parser.add_argument('--scale', type=int, nargs='+', default=[2], help='super resolution scale')
 parser.add_argument('--ext', type=str, default='img', help='dataset file extension')
 parser.add_argument('--patch_size', type=int, default=48, help='LR patch size for training')

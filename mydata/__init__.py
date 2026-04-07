@@ -37,25 +37,23 @@ class Data:
                 **kwargs  # 将其它的关键字参数包括num_work，pin_memory传递给父类的构造函数
             )
 
-        '''导入testSet，并构造testLoader并返回'''
-        if args.data_test in ['Set5', 'Set14', 'BSD100', 'Urban100', 'Manga109']:
-            if not args.benchmark_noise:  # 不是标准的含噪声数据集
-                module_test = import_module('mydata.benchmark')  # 先获取mydata中的benchmark这个模块
-                # 然后通过这个获取的模块，加载名为Benchmark的类
-                testset = getattr(module_test, 'Benchmark')(args, train=False)
+        '''导入testSet，并构造testLoader列表返回（支持多个测试数据集）'''
+        benchmark_names = ['Set5', 'Set14', 'BSD100', 'Urban100', 'Manga109']
+        self.loader_test = []
+        for dataset_name in args.data_test:
+            # Temporarily override data_test for dataset construction
+            args.data_test_single = dataset_name
+            if dataset_name in benchmark_names:
+                if not args.benchmark_noise:
+                    module_test = import_module('mydata.benchmark')
+                    testset = getattr(module_test, 'Benchmark')(args, train=False)
+                else:
+                    module_test = import_module('mydata.benchmark_noise')
+                    testset = getattr(module_test, 'BenchmarkNoise')(args, train=False)
             else:
-                module_test = import_module('mydata.benchmark_noise')
-                testset = getattr(module_test, 'BenchmarkNoise')(
-                    args,
-                    train=False
-                )
-        else:  # 如果对应的测试数据集都不在这五个数据集当中，那就根据参数给的值对应调取相应的测试集模块
-            module_test = import_module('mydata.' + args.data_test.lower())  # 根据运行时传递的参数来进行导包
-            testset = getattr(module_test, args.data_test)(args, train=False)
-        self.loader_test = MSDataLoader(  # 加载测试数据集
-            args,
-            testset,
-            batch_size=1,
-            shuffle=False,
-            **kwargs
-        )
+                module_test = import_module('mydata.' + dataset_name.lower())
+                testset = getattr(module_test, dataset_name)(args, train=False)
+            testset.dataset_name = dataset_name  # store name on dataset for trainer to read
+            self.loader_test.append(
+                MSDataLoader(args, testset, batch_size=1, shuffle=False, **kwargs)
+            )

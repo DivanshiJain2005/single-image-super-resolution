@@ -18,10 +18,28 @@ def make_model(args, parent=False):
 # ==========================================================
 # ---------------- Multi Prior Module ----------------
 # ==========================================================
+class ChannelAttention(nn.Module):
+    """Squeeze-and-Excitation channel attention."""
+    def __init__(self, channels, reduction=8):
+        super(ChannelAttention, self).__init__()
+        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channels, max(channels // reduction, 4)),
+            nn.ReLU(inplace=True),
+            nn.Linear(max(channels // reduction, 4), channels),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.shape
+        w = self.pool(x).view(b, c)
+        w = self.fc(w).view(b, c, 1, 1)
+        return x * w
+
+
 class MultiPriorModule(nn.Module):
     """
-    Produces multiple priors from input feature.
-    Here we use 3 experts:
+    Produces multiple priors from input feature with channel attention.
         1. Local convolution prior
         2. Dilated convolution prior
         3. Edge-enhanced prior
@@ -35,6 +53,9 @@ class MultiPriorModule(nn.Module):
         self.prior1 = nn.Sequential(
             nn.Conv2d(in_channels, 64, 3, padding=1),
             nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.ReLU(inplace=True),
+            ChannelAttention(64),
             nn.Conv2d(64, in_channels, 3, padding=1)
         )
 
@@ -42,6 +63,9 @@ class MultiPriorModule(nn.Module):
         self.prior2 = nn.Sequential(
             nn.Conv2d(in_channels, 64, 3, padding=2, dilation=2),
             nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.ReLU(inplace=True),
+            ChannelAttention(64),
             nn.Conv2d(64, in_channels, 3, padding=1)
         )
 
@@ -49,6 +73,9 @@ class MultiPriorModule(nn.Module):
         self.prior3 = nn.Sequential(
             nn.Conv2d(in_channels, 64, 5, padding=2),
             nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.ReLU(inplace=True),
+            ChannelAttention(64),
             nn.Conv2d(64, in_channels, 3, padding=1)
         )
 
@@ -96,8 +123,11 @@ class EPGDUN(nn.Module):
         self.patch_size = args.patch_size
         self.batch_size = int(args.batch_size / args.n_GPUs)
 
-        # Unfolding iterations
-        self.T = 4
+        # Unfolding iterations (increased from 4 → 6 for better convergence)
+        self.T = 6
+
+        # Residual scaling for training stability
+        self.res_scale = 0.1
 
         # ---------------- Texture Reconstruction ----------------
         self.eta = nn.ParameterList([nn.Parameter(torch.tensor(0.5)) for _ in range(self.T)])
@@ -117,13 +147,26 @@ class EPGDUN(nn.Module):
         self.mpm = MultiPriorModule(in_channels=3, num_priors=3)
         self.router = Router(in_channels=3, num_priors=3)
 
+        # ---------------- Global Skip Refinement ----------------
+        # Adds a learned residual on top of bicubic upsampling (major PSNR boost)
+        self.global_refinement = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 3, kernel_size=3, padding=1),
+        )
+
     # ==========================================================
     # Forward
     # ==========================================================
     def forward(self, y, idx_scale=None):
 
-        x_init = [F.interpolate(y, scale_factor=self.up_factor,
-                                mode='bilinear', align_corners=False)]
+        # Bicubic baseline — used as global skip connection
+        x_bicubic = F.interpolate(y, scale_factor=self.up_factor,
+                                  mode='bicubic', align_corners=False)
+
+        x_init = [x_bicubic]
         v_init = [x_init[0]]
 
         for i in range(self.T):
@@ -172,11 +215,11 @@ class EPGDUN(nn.Module):
                 fused_prior += weights[:, j:j+1, None, None] * priors[j]
 
             # ======================================================
-            # Residual Update
+            # Residual Update (with residual scaling for stability)
             # ======================================================
             residual = fused_prior - self.delta_3[i] * (
                 conv_diff + self.mu[i] * (v_down_resized - fused_prior)
-            )
+            ) * self.res_scale
 
             # Edge-guided refinement
             f_curr = self.EAFM(self.edgemap(fused_prior))
@@ -197,4 +240,5 @@ class EPGDUN(nn.Module):
             x_init.append(x_next)
             v_init.append(v_next)
 
-        return x_next
+        # Global skip: bicubic + learned refinement of the unfolded output
+        return x_bicubic + self.global_refinement(x_next)

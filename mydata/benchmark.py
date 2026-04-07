@@ -26,7 +26,10 @@ class Benchmark(srdata.SRData):
         return list_hr, list_lr
 
     def _set_filesystem(self, dir_data):
-        self.apath = os.path.join(dir_data, 'benchmark', self.args.data_test)
+        name = getattr(self.args, 'data_test_single', None) or (
+            self.args.data_test[0] if isinstance(self.args.data_test, list) else self.args.data_test
+        )
+        self.apath = os.path.join(dir_data, 'benchmark', name)
         self.dir_hr = os.path.join(self.apath, 'HR')
         self.dir_lr = os.path.join(self.apath, 'LR_bicubic')
         self.ext = '.png'

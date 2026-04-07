@@ -90,3 +90,39 @@ If you want to train model with different scales, you can add additional paramet
 ```
 python main.py --data_train DIV2K --epochs 300 --save_results SAVE_RESULTS --scale 4
 ```
+
+
+
+
+new commands:
+train:
+python main.py \
+  --dir_data data \
+  --data_train DIV2K \
+  --data_test Set5 Set14 BSD100 Urban100 Manga109 \
+  --scale 4 \
+  --epochs 600 \
+  --save EPGDUN2 \
+  --save_models \
+  --save_results \
+  --rgb_range 255 \
+  --patch_size 96 \
+  --decay_type Mstep_200_400_500 \
+  --lr 1e-4 \
+  --ext img \
+  --n_threads 0
+
+
+test:
+python main.py \
+  --dir_data data \
+  --data_test Set5 Set14 BSD100 Urban100 Manga109 \
+  --scale 4 \
+  --test_only \
+  --save_results \
+  --rgb_range 255 \
+  --resume -1 \
+  --load EPGDUN2 \
+  --self_ensemble \
+  --ext img \
+  --n_threads 0

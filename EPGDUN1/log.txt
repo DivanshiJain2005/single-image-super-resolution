@@ -4813,3 +4813,27 @@ Evaluation:
 ==> [4800/4800]	[L1: 0.0301]	2.8+6.1s
 Evaluation:
 [DIV2K x4]	PSNR: 28.505 (Best: 28.508 @epoch 286)
+Evaluation:
+[Set5 x4]	PSNR: 28.996 (Best: 28.996 @epoch 301)
+Evaluation:
+[Set5 x4]	PSNR: 28.996 (Best: 28.996 @epoch 301)
+Evaluation:
+[Set14 x4]	PSNR: 26.495 (Best: 28.508 @epoch 286)
+Evaluation:
+[Set14 x4]	PSNR: 28.996 (Best: 28.996 @epoch 301)
+[Set14 x4]	PSNR: 26.495 (Best: 28.508 @epoch 286)
+Evaluation:
+[Set5 x4]	PSNR: 28.996 (Best: 28.996 @epoch 301)
+[Set14 x4]	PSNR: 26.495 (Best: 28.508 @epoch 286)
+Evaluation:
+[Set5 x4]	PSNR: 28.996 (Best: 28.996 @epoch 301)
+[Set14 x4]	PSNR: 26.495 (Best: 28.508 @epoch 286)
+[BSD100 x4]	PSNR: 26.702 (Best: 28.508 @epoch 286)
+[Urban100 x4]	PSNR: 23.491 (Best: 28.508 @epoch 286)
+[Manga109 x4]	PSNR: 21.935 (Best: 28.508 @epoch 286)
+Evaluation:
+[Set5 x4]	PSNR: 28.996  SSIM: 0.8838 (Best PSNR: 28.996 @epoch 301)
+[Set14 x4]	PSNR: 26.495  SSIM: 0.7944 (Best PSNR: 28.508 @epoch 286)
+[BSD100 x4]	PSNR: 26.702  SSIM: 0.7272 (Best PSNR: 28.508 @epoch 286)
+[Urban100 x4]	PSNR: 23.491  SSIM: 0.7493 (Best PSNR: 28.508 @epoch 286)
+[Manga109 x4]	PSNR: 21.935  SSIM: 0.7491 (Best PSNR: 28.508 @epoch 286)
