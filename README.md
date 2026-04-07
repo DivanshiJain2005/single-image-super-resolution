@@ -101,16 +101,19 @@ python main.py \
   --data_train DIV2K \
   --data_test Set5 Set14 BSD100 Urban100 Manga109 \
   --scale 4 \
-  --epochs 600 \
-  --save EPGDUN2 \
+  --n_feats 128 \
+  --epochs 300 \
+  --batch_size 16 \
+  --save EPGDUN_x4 \
   --save_models \
   --save_results \
   --rgb_range 255 \
   --patch_size 96 \
-  --decay_type Mstep_200_400_500 \
+  --decay_type Mstep_150_225_275 \
   --lr 1e-4 \
   --ext img \
-  --n_threads 0
+  --n_threads 4
+
 
 
 test:

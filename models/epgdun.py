@@ -43,40 +43,47 @@ class MultiPriorModule(nn.Module):
         1. Local convolution prior
         2. Dilated convolution prior
         3. Edge-enhanced prior
+    n_feats controls internal feature width — set higher for better capacity.
     """
-    def __init__(self, in_channels=3, num_priors=3):
+    def __init__(self, in_channels=3, num_priors=3, n_feats=128):
         super(MultiPriorModule, self).__init__()
 
         self.num_priors = num_priors
 
         # Local prior
         self.prior1 = nn.Sequential(
-            nn.Conv2d(in_channels, 64, 3, padding=1),
+            nn.Conv2d(in_channels, n_feats, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(n_feats, n_feats, 3, padding=1),
             nn.ReLU(inplace=True),
-            ChannelAttention(64),
-            nn.Conv2d(64, in_channels, 3, padding=1)
+            nn.Conv2d(n_feats, n_feats, 3, padding=1),
+            nn.ReLU(inplace=True),
+            ChannelAttention(n_feats),
+            nn.Conv2d(n_feats, in_channels, 3, padding=1)
         )
 
         # Dilated prior
         self.prior2 = nn.Sequential(
-            nn.Conv2d(in_channels, 64, 3, padding=2, dilation=2),
+            nn.Conv2d(in_channels, n_feats, 3, padding=2, dilation=2),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(n_feats, n_feats, 3, padding=1),
             nn.ReLU(inplace=True),
-            ChannelAttention(64),
-            nn.Conv2d(64, in_channels, 3, padding=1)
+            nn.Conv2d(n_feats, n_feats, 3, padding=1),
+            nn.ReLU(inplace=True),
+            ChannelAttention(n_feats),
+            nn.Conv2d(n_feats, in_channels, 3, padding=1)
         )
 
         # Edge-aware prior
         self.prior3 = nn.Sequential(
-            nn.Conv2d(in_channels, 64, 5, padding=2),
+            nn.Conv2d(in_channels, n_feats, 5, padding=2),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(n_feats, n_feats, 3, padding=1),
             nn.ReLU(inplace=True),
-            ChannelAttention(64),
-            nn.Conv2d(64, in_channels, 3, padding=1)
+            nn.Conv2d(n_feats, n_feats, 3, padding=1),
+            nn.ReLU(inplace=True),
+            ChannelAttention(n_feats),
+            nn.Conv2d(n_feats, in_channels, 3, padding=1)
         )
 
     def forward(self, x):
@@ -123,19 +130,21 @@ class EPGDUN(nn.Module):
         self.patch_size = args.patch_size
         self.batch_size = int(args.batch_size / args.n_GPUs)
 
-        # Unfolding iterations (increased from 4 → 6 for better convergence)
-        self.T = 6
+        # Unfolding iterations — 8 is optimal for A100 memory budget
+        self.T = 8
 
         # Residual scaling for training stability
         self.res_scale = 0.1
+
+        self.n_feats = args.n_feats
 
         # ---------------- Texture Reconstruction ----------------
         self.eta = nn.ParameterList([nn.Parameter(torch.tensor(0.5)) for _ in range(self.T)])
         self.mu = nn.ParameterList([nn.Parameter(torch.tensor(0.1)) for _ in range(self.T)])
         self.delta_3 = nn.ParameterList([nn.Parameter(torch.tensor(0.5)) for _ in range(self.T)])
 
-        self.conv_up = ConvUp(3, self.up_factor)
-        self.conv_down = ConvDown(3, self.up_factor)
+        self.conv_up = ConvUp(3, self.up_factor, n_feats=args.n_feats)
+        self.conv_down = ConvDown(3, self.up_factor, n_feats=args.n_feats)
 
         # ---------------- Edge-Guided ----------------
         self.edgemap = EdgeMap()
@@ -144,17 +153,20 @@ class EPGDUN(nn.Module):
         self.IGRM = IGRM()
 
         # ---------------- Multi-Prior + Router ----------------
-        self.mpm = MultiPriorModule(in_channels=3, num_priors=3)
+        self.mpm = MultiPriorModule(in_channels=3, num_priors=3, n_feats=args.n_feats)
         self.router = Router(in_channels=3, num_priors=3)
 
         # ---------------- Global Skip Refinement ----------------
-        # Adds a learned residual on top of bicubic upsampling (major PSNR boost)
+        # Deeper refinement network using full n_feats capacity
         self.global_refinement = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.Conv2d(3, args.n_feats, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.Conv2d(args.n_feats, args.n_feats, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 3, kernel_size=3, padding=1),
+            nn.Conv2d(args.n_feats, args.n_feats, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            ChannelAttention(args.n_feats),
+            nn.Conv2d(args.n_feats, 3, kernel_size=3, padding=1),
         )
 
     # ==========================================================
