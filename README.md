@@ -103,3 +103,9 @@ python main.py \
   --patch_size 64 \
   --decay_type Mstep_100_150_180 \
   --lr 1e-4
+
+
+Architecture: <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/8a195eca-4fdd-4028-8b59-264befa66bc9" />
+<img width="1536" height="1024" alt="image (1)" src="https://github.com/user-attachments/assets/020ec9c2-bebb-4d77-a6fa-126374d68c7a" />
+<img width="1536" height="1024" alt="image (2)" src="https://github.com/user-attachments/assets/d96d5bb8-984e-4d9c-b42b-fb8c6c5b77f7" />
+
