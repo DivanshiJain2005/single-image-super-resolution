@@ -4798,3 +4798,9 @@ Evaluation:
 ==> [4800/4800]	[L1: 0.0268]	12.8+1.0s
 Evaluation:
 [DIV2K x4]	PSNR: 30.016  SSIM: 0.8694 (Best PSNR: 30.016 @epoch 300)
+Evaluation:
+[Set5 x4]	PSNR: 31.534  SSIM: 0.9246 (Best PSNR: 31.534 @epoch 301)
+[Set14 x4]	PSNR: 28.247  SSIM: 0.8294 (Best PSNR: 30.016 @epoch 300)
+[BSD100 x4]	PSNR: 27.097  SSIM: 0.7448 (Best PSNR: 30.016 @epoch 300)
+[Urban100 x4]	PSNR: 25.447  SSIM: 0.8172 (Best PSNR: 30.016 @epoch 300)
+[Manga109 x4]	PSNR: 21.264  SSIM: 0.7536 (Best PSNR: 30.016 @epoch 300)
